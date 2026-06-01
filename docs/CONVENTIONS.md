@@ -128,7 +128,7 @@ this doc does **not** prescribe code changes:
 - `cheerio` is an unused dependency (the scraper decodes turbo-stream, no DOM).
 - `app/manifest.ts` imports `APP_URL` but does not use it (`start_url` is
   relative `'/'`).
-- `app/manifest.ts` sets `theme_color: '#c0391b'` and
+- `app/manifest.ts` sets `theme_color: '#b3002d'` and
   `background_color: '#ffffff'`, which predate the red brand palette in
   `app/globals.css` and `public/images/` — they are not derived from the theme
   tokens, so they don't match the logo red.
