@@ -1,0 +1,303 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* AMOLED is dark-family but a standalone class, so dark: utilities must match it too */
+@custom-variant dark (&:is(.dark *, .amoled *));
+
+/*
+  Brand theme — inspired directly by the app logo (ChatGPT red on cream/white).
+  Primary is the logo's vivid red (~#E8332A); neutrals carry a faint warm tint
+  so surfaces feel related to the cream document in the icon.
+
+  Four selectable variants (see ThemeSwitcher + next-themes config in layout.tsx):
+    :root   → Light   (warm off-white, the default)
+    .dark   → Dark    (warm near-black)
+    .amoled → AMOLED  (pure-black surfaces; applied as `dark amoled`, so it
+                       layers on top of .dark and only overrides surfaces)
+    .brand  → Brand   (red-forward light theme — the logo's signature look)
+
+  The brand red is intentionally identical across every theme so the primary
+  button reads the same everywhere, reinforcing the logo connection. Lightness
+  is tuned to 0.575 so white foreground text clears WCAG AA (~4.5:1).
+
+  Full Tailwind v4 token mapping so every shadcn color utility
+  (bg-card, bg-primary, border, ring, etc.) is generated from the tokens below.
+*/
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  --shadow-2xs: var(--shadow-2xs);
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow: var(--shadow);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+}
+
+/* ── Light (default) — warm off-white inspired by the cream document ── */
+:root {
+  --radius: 0.75rem;
+
+  --background: oklch(0.985 0.006 60);
+  --foreground: oklch(0.22 0.012 30);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.22 0.012 30);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.22 0.012 30);
+
+  /* Logo red — identical across every theme for a consistent brand button */
+  --primary: oklch(0.575 0.225 27);
+  --primary-foreground: oklch(0.985 0.01 27);
+  --secondary: oklch(0.965 0.008 50);
+  --secondary-foreground: oklch(0.3 0.015 30);
+  --muted: oklch(0.965 0.008 50);
+  --muted-foreground: oklch(0.55 0.02 30);
+  --accent: oklch(0.95 0.03 27);
+  --accent-foreground: oklch(0.4 0.13 27);
+  --destructive: oklch(0.55 0.225 27);
+  --destructive-foreground: oklch(0.985 0.01 27);
+
+  --border: oklch(0.915 0.012 45);
+  --input: oklch(0.915 0.012 45);
+  --ring: oklch(0.575 0.225 27);
+
+  --chart-1: oklch(0.575 0.225 27);
+  --chart-2: oklch(0.68 0.17 45);
+  --chart-3: oklch(0.78 0.15 75);
+  --chart-4: oklch(0.62 0.2 5);
+  --chart-5: oklch(0.45 0.16 20);
+
+  --shadow-2xs: 0 1px 2px 0 oklch(0.22 0.04 27 / 0.04);
+  --shadow-xs: 0 1px 2px 0 oklch(0.22 0.04 27 / 0.05);
+  --shadow-sm:
+    0 1px 3px 0 oklch(0.22 0.04 27 / 0.08),
+    0 1px 2px -1px oklch(0.22 0.04 27 / 0.08);
+  --shadow:
+    0 1px 3px 0 oklch(0.22 0.04 27 / 0.1),
+    0 1px 2px -1px oklch(0.22 0.04 27 / 0.1);
+  --shadow-md:
+    0 4px 12px -2px oklch(0.22 0.04 27 / 0.1),
+    0 2px 6px -2px oklch(0.22 0.04 27 / 0.08);
+  --shadow-lg:
+    0 12px 28px -6px oklch(0.22 0.04 27 / 0.14),
+    0 6px 12px -6px oklch(0.22 0.04 27 / 0.1);
+}
+
+/* ── Dark — warm near-black; red primary stays the brand red ── */
+.dark {
+  --background: oklch(0.165 0.008 30);
+  --foreground: oklch(0.965 0.005 60);
+  --card: oklch(0.21 0.01 30);
+  --card-foreground: oklch(0.965 0.005 60);
+  --popover: oklch(0.21 0.01 30);
+  --popover-foreground: oklch(0.965 0.005 60);
+
+  --primary: oklch(0.575 0.225 27);
+  --primary-foreground: oklch(0.985 0.01 27);
+  --secondary: oklch(0.27 0.012 30);
+  --secondary-foreground: oklch(0.965 0.005 60);
+  --muted: oklch(0.27 0.012 30);
+  --muted-foreground: oklch(0.72 0.018 40);
+  --accent: oklch(0.32 0.05 27);
+  --accent-foreground: oklch(0.92 0.03 27);
+  --destructive: oklch(0.62 0.22 27);
+  --destructive-foreground: oklch(0.985 0.01 27);
+
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.62 0.22 27);
+
+  --chart-1: oklch(0.62 0.22 27);
+  --chart-2: oklch(0.7 0.16 45);
+  --chart-3: oklch(0.8 0.14 75);
+  --chart-4: oklch(0.68 0.18 5);
+  --chart-5: oklch(0.55 0.16 20);
+
+  --shadow-2xs: 0 1px 2px 0 oklch(0 0 0 / 0.2);
+  --shadow-xs: 0 1px 2px 0 oklch(0 0 0 / 0.25);
+  --shadow-sm:
+    0 1px 3px 0 oklch(0 0 0 / 0.35),
+    0 1px 2px -1px oklch(0 0 0 / 0.35);
+  --shadow:
+    0 1px 3px 0 oklch(0 0 0 / 0.4),
+    0 1px 2px -1px oklch(0 0 0 / 0.4);
+  --shadow-md:
+    0 4px 12px -2px oklch(0 0 0 / 0.45),
+    0 2px 6px -2px oklch(0 0 0 / 0.4);
+  --shadow-lg:
+    0 12px 28px -6px oklch(0 0 0 / 0.5),
+    0 6px 12px -6px oklch(0 0 0 / 0.45);
+}
+
+/*
+  ── AMOLED — pure-black surfaces for OLED power saving ──
+  A self-contained class (next-themes applies it alone, not layered on .dark —
+  see layout.tsx for why). It mirrors the .dark palette but pushes the page
+  background to true black and keeps cards just barely raised, which is the
+  point of an AMOLED theme. The `dark` Tailwind variant matches .amoled too.
+*/
+.amoled {
+  --background: oklch(0 0 0);
+  --foreground: oklch(0.965 0.005 60);
+  --card: oklch(0.135 0.006 30);
+  --card-foreground: oklch(0.965 0.005 60);
+  --popover: oklch(0.135 0.006 30);
+  --popover-foreground: oklch(0.965 0.005 60);
+
+  --primary: oklch(0.575 0.225 27);
+  --primary-foreground: oklch(0.985 0.01 27);
+  --secondary: oklch(0.2 0.008 30);
+  --secondary-foreground: oklch(0.965 0.005 60);
+  --muted: oklch(0.2 0.008 30);
+  --muted-foreground: oklch(0.72 0.018 40);
+  --accent: oklch(0.27 0.045 27);
+  --accent-foreground: oklch(0.92 0.03 27);
+  --destructive: oklch(0.62 0.22 27);
+  --destructive-foreground: oklch(0.985 0.01 27);
+
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 16%);
+  --ring: oklch(0.62 0.22 27);
+
+  --chart-1: oklch(0.62 0.22 27);
+  --chart-2: oklch(0.7 0.16 45);
+  --chart-3: oklch(0.8 0.14 75);
+  --chart-4: oklch(0.68 0.18 5);
+  --chart-5: oklch(0.55 0.16 20);
+
+  /* Deeper, fully opaque shadows read better against true black */
+  --shadow-2xs: 0 1px 2px 0 oklch(0 0 0 / 0.5);
+  --shadow-xs: 0 1px 2px 0 oklch(0 0 0 / 0.55);
+  --shadow-sm:
+    0 1px 3px 0 oklch(0 0 0 / 0.6),
+    0 1px 2px -1px oklch(0 0 0 / 0.6);
+  --shadow:
+    0 1px 3px 0 oklch(0 0 0 / 0.7),
+    0 1px 2px -1px oklch(0 0 0 / 0.7);
+  --shadow-md:
+    0 4px 12px -2px oklch(0 0 0 / 0.7),
+    0 2px 6px -2px oklch(0 0 0 / 0.65);
+  --shadow-lg:
+    0 12px 28px -6px oklch(0 0 0 / 0.75),
+    0 6px 12px -6px oklch(0 0 0 / 0.7);
+}
+
+/*
+  ── Brand — the logo's signature red-on-cream identity ──
+  A light-family theme where every neutral carries a warm red wash and the
+  surfaces echo the cream document + white card of the icon. This is the most
+  overtly "branded" variant; it makes the logo connection unmistakable.
+*/
+.brand {
+  --background: oklch(0.985 0.013 30);
+  --foreground: oklch(0.26 0.05 27);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.26 0.05 27);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.26 0.05 27);
+
+  --primary: oklch(0.575 0.225 27);
+  --primary-foreground: oklch(0.985 0.01 27);
+  --secondary: oklch(0.95 0.035 30);
+  --secondary-foreground: oklch(0.4 0.13 27);
+  --muted: oklch(0.955 0.025 30);
+  --muted-foreground: oklch(0.52 0.08 27);
+  --accent: oklch(0.92 0.06 27);
+  --accent-foreground: oklch(0.4 0.16 27);
+  --destructive: oklch(0.52 0.23 27);
+  --destructive-foreground: oklch(0.985 0.01 27);
+
+  --border: oklch(0.9 0.035 30);
+  --input: oklch(0.9 0.035 30);
+  --ring: oklch(0.575 0.225 27);
+
+  --chart-1: oklch(0.575 0.225 27);
+  --chart-2: oklch(0.65 0.2 12);
+  --chart-3: oklch(0.7 0.17 40);
+  --chart-4: oklch(0.78 0.15 70);
+  --chart-5: oklch(0.45 0.17 20);
+
+  --shadow-2xs: 0 1px 2px 0 oklch(0.4 0.16 27 / 0.06);
+  --shadow-xs: 0 1px 2px 0 oklch(0.4 0.16 27 / 0.07);
+  --shadow-sm:
+    0 1px 3px 0 oklch(0.4 0.16 27 / 0.1),
+    0 1px 2px -1px oklch(0.4 0.16 27 / 0.1);
+  --shadow:
+    0 1px 3px 0 oklch(0.4 0.16 27 / 0.12),
+    0 1px 2px -1px oklch(0.4 0.16 27 / 0.12);
+  --shadow-md:
+    0 4px 12px -2px oklch(0.4 0.16 27 / 0.14),
+    0 2px 6px -2px oklch(0.4 0.16 27 / 0.1);
+  --shadow-lg:
+    0 12px 28px -6px oklch(0.45 0.18 27 / 0.18),
+    0 6px 12px -6px oklch(0.45 0.18 27 / 0.14);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+    outline-color: color-mix(in oklch, var(--ring) 50%, transparent);
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+}
+
+/* Footer love icon — pulsing heart (keyframe namespaced to avoid Tailwind's `pulse`) */
+.heart-svg {
+  fill: red;
+  position: relative;
+  top: -1px;
+  height: 6pt;
+  animation: heart-pulse 1s ease infinite;
+}
+
+@keyframes heart-pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.3);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heart-svg {
+    animation: none;
+  }
+}

@@ -1,0 +1,10 @@
+node_modules/
+.next/
+out/
+.open-next/
+.wrangler/
+.env.local
+.env.*.local
+*.pem
+npm-debug.log*
+.DS_Store
