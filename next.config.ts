@@ -4,9 +4,16 @@ const isDev = process.env.NODE_ENV === 'development'
 
 // Next.js Fast Refresh / HMR evaluates modules with eval() in dev only.
 // Allow 'unsafe-eval' in development; keep production script-src strict.
+//
+// 'wasm-unsafe-eval' (prod): react-pdf's layout engine (yoga-layout) calls
+// WebAssembly.instantiate() in the browser. Under CSP, compiling/instantiating
+// WASM requires either 'unsafe-eval' or the narrower 'wasm-unsafe-eval'. Without
+// it the browser throws "CompileError: WebAssembly.instantiate(): ... violates
+// the following Content Security Policy directive" and PDF generation aborts.
+// 'wasm-unsafe-eval' permits WASM only — it does NOT re-enable JS eval().
 const scriptSrc = isDev
   ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
-  : "script-src 'self' 'unsafe-inline'"
+  : "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'"
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
