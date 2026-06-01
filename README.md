@@ -46,7 +46,7 @@ Workers via OpenNext.
 ```bash
 git clone https://github.com/fyvri/save-chatgpt-as-pdf
 cd save-chatgpt-as-pdf
-nvm use                      # Node 20+ (see .nvmrc)
+nvm use                      # Node 22+ (see .nvmrc)
 npm install                  # shadcn primitives & PDF fonts ship in the repo
 cp .env.example .env.local   # Upstash vars are optional for local dev
 npm run dev                  # http://localhost:3000

@@ -28,7 +28,7 @@ Cloudflare Workers via OpenNext. PWA-enabled.
 ```bash
 git clone https://github.com/fyvri/save-chatgpt-as-pdf
 cd save-chatgpt-as-pdf
-nvm use                      # Node 20+ (see .nvmrc)
+nvm use                      # Node 22+ (see .nvmrc)
 npm install                  # installs deps; shadcn primitives & fonts ship in the repo
 cp .env.example .env.local   # Upstash vars optional for local dev (see ENVIRONMENT.md)
 npm run dev

@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Node.js 20+ (`nvm use`)
+- Node.js 22+ (`nvm use`)
 - VS Code + ESLint + Tailwind CSS IntelliSense extensions
 
 ## Setup
@@ -10,7 +10,7 @@
 ```bash
 git clone https://github.com/fyvri/save-chatgpt-as-pdf
 cd save-chatgpt-as-pdf
-nvm use                      # Node 20+ (see .nvmrc)
+nvm use                      # Node 22+ (see .nvmrc)
 npm install
 cp .env.example .env.local   # Upstash vars are optional for local dev
 npm run dev

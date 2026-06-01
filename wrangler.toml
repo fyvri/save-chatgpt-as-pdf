@@ -2,6 +2,7 @@ name = "save-chatgpt-as-pdf"
 main = ".open-next/worker.js"
 compatibility_date = "2025-05-01"
 compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
+keep_names = false
 
 [assets]
 directory = ".open-next/assets"

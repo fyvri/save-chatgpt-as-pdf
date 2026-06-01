@@ -1,6 +1,6 @@
 # Deploy — Cloudflare Workers
 
-1. **Prerequisites:** Node.js 20+, `wrangler` (a dev dependency, installed by
+1. **Prerequisites:** Node.js 22+, `wrangler` (a dev dependency, installed by
    `npm install`), a Cloudflare account. An Upstash account (free tier) is
    **optional** but recommended — without it the app still works, just with no
    caching and no Upstash-backed rate limiting.
