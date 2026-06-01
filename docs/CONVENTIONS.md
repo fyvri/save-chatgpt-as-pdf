@@ -22,17 +22,18 @@ adding features so changes match existing patterns. It complements
 
 All magic values live in `constants/app.ts` — never hard-code these inline.
 
-| Constant                                    | Value           | Rule it enforces                                                          |
-| ------------------------------------------- | --------------- | ------------------------------------------------------------------------- |
-| `RATE_LIMIT_REQUESTS` / `RATE_LIMIT_WINDOW` | `10` / `'60 s'` | 10 requests per IP per 60 s (sliding window).                             |
-| `CACHE_TTL_SECONDS`                         | `3600`          | Scraped conversations cached for 1 hour.                                  |
-| `MAX_URL_LENGTH`                            | `200`           | Reject over-long URLs before regex (DoS guard).                           |
-| `FETCH_TIMEOUT_MS`                          | `15_000`        | Abort a ChatGPT fetch after 15 s; one automatic retry on the first abort. |
-| `USER_AGENTS`                               | 4 strings       | Rotated per request to reduce bot-detection blocks.                       |
-| `MAX_EMBEDDED_IMAGES`                       | `24`            | Hard cap on images fetched + inlined per conversation.                    |
-| `MAX_IMAGE_BYTES`                           | `3_000_000`     | Skip any single image larger than ~3 MB.                                  |
-| `IMAGE_FETCH_TIMEOUT_MS`                    | `8_000`         | Per-image fetch timeout when inlining web-search images.                  |
-| `CHATGPT_URL_REGEX` (`lib/scraper.ts`)      | strict UUID     | Only `https://chatgpt.com/share/<uuid>` is ever fetched.                  |
+| Constant                                    | Value           | Rule it enforces                                                           |
+| ------------------------------------------- | --------------- | -------------------------------------------------------------------------- |
+| `RATE_LIMIT_REQUESTS` / `RATE_LIMIT_WINDOW` | `10` / `'60 s'` | 10 requests per IP per 60 s (sliding window).                              |
+| `CACHE_TTL_SECONDS`                         | `3600`          | Scraped conversations cached for 1 hour.                                   |
+| `MAX_URL_LENGTH`                            | `200`           | Reject over-long URLs before regex (DoS guard).                            |
+| `FETCH_TIMEOUT_MS`                          | `15_000`        | Abort a ChatGPT fetch after 15 s; one automatic retry on the first abort.  |
+| `CHATGPT_FETCH_HEADERS`                     | header set      | Fixed, coherent Chrome fingerprint for the share-page fetch (bot evasion). |
+| `USER_AGENTS`                               | 4 strings       | Rotated per **image** fetch only (share page uses the fingerprint above).  |
+| `MAX_EMBEDDED_IMAGES`                       | `24`            | Hard cap on images fetched + inlined per conversation.                     |
+| `MAX_IMAGE_BYTES`                           | `3_000_000`     | Skip any single image larger than ~3 MB.                                   |
+| `IMAGE_FETCH_TIMEOUT_MS`                    | `8_000`         | Per-image fetch timeout when inlining web-search images.                   |
+| `CHATGPT_URL_REGEX` (`lib/scraper.ts`)      | strict UUID     | Only `https://chatgpt.com/share/<uuid>` is ever fetched.                   |
 
 Validation, caching, and rate limiting only run server-side in `/api/convert`.
 
@@ -52,9 +53,10 @@ These are followed throughout; keep matching them.
 'nodejs'` — required for the scraper and Upstash SDK. Keep it.
 - **Three-layer SSRF guard** in `validateUrl`: length → strict regex → `new
 URL()` host/protocol check. Don't collapse these layers.
-- **Typed errors carry HTTP status.** The scraper throws
-  `Object.assign(new Error('CODE'), { status })`; the route maps `status`/
-  `message`/`name` to user-facing messages. Add new failure modes the same way.
+- **Typed errors carry HTTP status (and an optional `code`).** The scraper throws
+  `Object.assign(new Error('CODE'), { status, code? })`; the route maps `code`
+  first (e.g. `BOT_BLOCKED` → 503), then falls back to `status`/`message`/`name`
+  for the user-facing message. Add new failure modes the same way.
 - **The PDF is rendered exactly once.** Rendering happens in `useChatGPTScrape`;
   the single `Blob` feeds preview, fullscreen, download, and share. Never mount
   react-pdf `<PDFViewer>`/`<PDFDownloadLink>` (it re-renders and crashes — see
@@ -126,7 +128,7 @@ this doc does **not** prescribe code changes:
 - `cheerio` is an unused dependency (the scraper decodes turbo-stream, no DOM).
 - `app/manifest.ts` imports `APP_URL` but does not use it (`start_url` is
   relative `'/'`).
-- `app/manifest.ts` sets `theme_color: '#4f46e5'` (indigo) and
+- `app/manifest.ts` sets `theme_color: '#c0391b'` and
   `background_color: '#ffffff'`, which predate the red brand palette in
   `app/globals.css` and `public/images/` — they are not derived from the theme
   tokens, so they don't match the logo red.

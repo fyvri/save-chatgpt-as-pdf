@@ -25,7 +25,8 @@ Server (Node.js runtime, app/api/convert/route.ts):
   → scrapeMessages(url)        — fetch + turbo-stream decode (see SCRAPING.md)
       ├─ interleave web-search image_group carousels into assistant prose
       ├─ embed every referenced image as a base64 data URI (capped, parallel)
-      └─ 403 → "Chat is private"   404 → "Chat not found"
+      └─ 403 bot-challenge (BOT_BLOCKED) → 503 "temporarily blocking, try again"
+         403 private (PRIVATE) → "chat is private"   404 → "Chat not found"
          PARSE_ERROR → "structure changed"   AbortError → "slow to respond"
   → cache write (TTL 1 h)      [best-effort; errors ignored]
   → { messages, title, fromCache: false }
@@ -46,7 +47,8 @@ ConvertForm:
 ## Why Split Server vs. Client
 
 - **Scraping is server-side** because it needs an outbound `fetch` to
-  `chatgpt.com` with a rotating User-Agent and must keep Upstash tokens secret.
+  `chatgpt.com` with a coherent browser fingerprint (to get past Cloudflare bot
+  detection — see [SCRAPING.md](./SCRAPING.md)) and must keep Upstash tokens secret.
 - **PDF rendering is client-side** because `@react-pdf/renderer` runs its
   layout engine (yoga-layout WASM) and Twemoji emoji fetches in the browser, and
   rendering large documents server-side on a Worker is impractical. The PDF is
@@ -116,7 +118,7 @@ interface ConvertResponse {
 }
 interface ConvertError {
   error: string
-  code: 400 | 403 | 404 | 429 | 500
+  code: 400 | 403 | 404 | 429 | 500 | 503
 }
 ```
 

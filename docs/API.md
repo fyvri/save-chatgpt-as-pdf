@@ -32,19 +32,28 @@ here — it is rendered client-side from this response.
 
 ### Status Codes
 
-| HTTP | Condition                 | Message                                                       |
-| ---- | ------------------------- | ------------------------------------------------------------- |
-| 400  | Invalid/missing JSON body | "Invalid request body. Expected JSON with a url field."       |
-| 400  | URL fails validation      | "Invalid URL. Only public ChatGPT share links are supported." |
-| 403  | ChatGPT returned 403      | "Chat is private. Make it public share first."                |
-| 404  | ChatGPT returned 404      | "Chat not found or deleted."                                  |
-| 429  | Rate limit exceeded       | "Too many requests. Try again in a moment."                   |
-| 500  | Fetch timeout             | "ChatGPT is slow to respond. Try again."                      |
-| 500  | Parse failed              | "ChatGPT structure changed. Contact developer."               |
-| 500  | Unexpected                | "An unexpected error occurred."                               |
+| HTTP | Condition                  | Message                                                                             |
+| ---- | -------------------------- | ----------------------------------------------------------------------------------- |
+| 400  | Invalid/missing JSON body  | "Invalid request body. Expected JSON with a url field."                             |
+| 400  | URL fails validation       | "Invalid URL. Only public ChatGPT share links are supported."                       |
+| 403  | Share is genuinely private | "This chat is private. Open the share link and make it public first."               |
+| 404  | ChatGPT returned 404       | "Chat not found or deleted."                                                        |
+| 429  | Rate limit exceeded        | "Too many requests. Try again in a moment."                                         |
+| 500  | Fetch timeout              | "ChatGPT is slow to respond. Try again."                                            |
+| 500  | Parse failed               | "ChatGPT structure changed. Contact developer."                                     |
+| 500  | Unexpected                 | "An unexpected error occurred."                                                     |
+| 503  | ChatGPT bot challenge      | "ChatGPT is temporarily blocking automated requests. Please try again in a moment." |
 
+> **403 vs 503 — both originate from a ChatGPT `403`.** `chatgpt.com` sits behind
+> Cloudflare Bot Management, and a server-side `403` is ambiguous: it can mean the
+> share is genuinely private/disabled, **or** that Cloudflare served our Worker a
+> bot challenge. `lib/scraper.ts` distinguishes them — a challenge (detected via a
+> `cf-mitigated: challenge` header or a challenge-platform body) is reported as a
+> transient **503** with `Retry-After: 15`; anything else is treated as a genuine
+> private chat and surfaced as **403**. See [SCRAPING.md](./SCRAPING.md).
+>
 > Note: 429 responses include a `Retry-After: <seconds>` header calculated as
-> `Math.ceil((reset - Date.now()) / 1000)`.
+> `Math.ceil((reset - Date.now()) / 1000)`; 503 responses carry `Retry-After: 15`.
 
 ### Message Shape
 

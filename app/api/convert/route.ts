@@ -66,9 +66,7 @@ export async function POST(req: NextRequest) {
           const messages: Message[] = Array.isArray(parsed)
             ? (parsed as Message[])
             : ((parsed as { messages?: Message[] }).messages ?? [])
-          const title = Array.isArray(parsed)
-            ? undefined
-            : (parsed as { title?: string }).title
+          const title = Array.isArray(parsed) ? undefined : (parsed as { title?: string }).title
           return NextResponse.json({ messages, title, fromCache: true })
         }
       } catch (cacheErr) {
@@ -84,10 +82,22 @@ export async function POST(req: NextRequest) {
       messages = result.messages
       title = result.title
     } catch (err: unknown) {
-      const e = err as { status?: number; message?: string; name?: string }
+      const e = err as { status?: number; code?: string; message?: string; name?: string }
+      // A 403 is ambiguous (see lib/scraper.ts): a Cloudflare bot challenge to our
+      // Worker is transient, a genuinely private share is not. The scraper tags
+      // the challenge case with code 'BOT_BLOCKED' — surface it as 503 + retry so
+      // we no longer mislabel a public chat as "private".
+      if (e.code === 'BOT_BLOCKED')
+        return NextResponse.json(
+          {
+            error:
+              'ChatGPT is temporarily blocking automated requests. Please try again in a moment.',
+          },
+          { status: 503, headers: { 'Retry-After': '15' } }
+        )
       if (e.status === 403)
         return NextResponse.json(
-          { error: 'Chat is private. Make it public share first.' },
+          { error: 'This chat is private. Open the share link and make it public first.' },
           { status: 403 }
         )
       if (e.status === 404)

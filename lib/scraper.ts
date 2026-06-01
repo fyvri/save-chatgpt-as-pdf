@@ -1,5 +1,6 @@
 import {
   USER_AGENTS,
+  CHATGPT_FETCH_HEADERS,
   MAX_URL_LENGTH,
   FETCH_TIMEOUT_MS,
   MAX_EMBEDDED_IMAGES,
@@ -51,15 +52,35 @@ async function fetchWithTimeout(url: string, attempt = 1): Promise<string> {
   try {
     const res = await fetch(url, {
       signal: controller.signal,
-      headers: {
-        // TODO: verify UA rotation bypasses bot detection — last checked 2026-05-31
-        'User-Agent': getRandomUA(),
-        Accept: 'text/html,application/xhtml+xml',
-        'Accept-Language': 'en-US,en;q=0.9',
-      },
+      // A single coherent Chrome fingerprint — see CHATGPT_FETCH_HEADERS. Sparse
+      // headers from a Worker IP score as a bot and earn a 403 challenge.
+      headers: CHATGPT_FETCH_HEADERS,
     })
 
-    if (res.status === 403) throw Object.assign(new Error('FORBIDDEN'), { status: 403 })
+    // A 403 from chatgpt.com is ambiguous: it can mean the share is genuinely
+    // private/disabled, OR Cloudflare Bot Management served a challenge page to
+    // our Worker. Distinguish them so the user gets an accurate message — a
+    // challenge is transient ("try again"), a private chat is not. Cloudflare
+    // tags challenges with a `cf-mitigated: challenge` header and/or a body
+    // carrying the challenge-platform script; absent those, treat it as private.
+    if (res.status === 403) {
+      const cfMitigated = res.headers.get('cf-mitigated')?.toLowerCase()
+      let body = ''
+      try {
+        body = await res.text()
+      } catch {
+        /* body unreadable — fall through to header-only classification */
+      }
+      const challenged =
+        cfMitigated === 'challenge' ||
+        /cdn-cgi\/challenge-platform|_cf_chl_opt|just a moment\.\.\.|attention required|enable javascript and cookies to continue/i.test(
+          body
+        )
+      throw Object.assign(new Error(challenged ? 'BOT_BLOCKED' : 'FORBIDDEN'), {
+        status: 403,
+        code: challenged ? 'BOT_BLOCKED' : 'PRIVATE',
+      })
+    }
     if (res.status === 404) throw Object.assign(new Error('NOT_FOUND'), { status: 404 })
     if (!res.ok) throw new Error(`HTTP_${res.status}`)
 

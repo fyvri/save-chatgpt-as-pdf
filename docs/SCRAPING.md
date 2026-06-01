@@ -22,7 +22,7 @@ window.__reactRouterContext.streamController.enqueue("[\"...flattened graph...\"
 ## Decoding Pipeline (`scrapeMessages`)
 
 ```
-fetchWithTimeout(url)            → raw HTML (UA rotation, 15 s timeout, 1 retry)
+fetchWithTimeout(url)            → raw HTML (fixed Chrome fingerprint, 15 s timeout, 1 retry)
 → extractEnqueuedChunks(html)    → string[] of every enqueue("…") payload
 → join + take the first stream line (the synchronous loader data)
 → JSON.parse → unflatten(values) → rehydrated object graph
@@ -34,18 +34,18 @@ fetchWithTimeout(url)            → raw HTML (UA rotation, 15 s timeout, 1 retr
 → { messages, title }
 ```
 
-| Function                | Responsibility                                                                                                                                                                                                                                                                                   |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `fetchWithTimeout`      | `fetch` with a random User-Agent, 15 s `AbortController` timeout, one automatic retry on the first abort. Maps HTTP 403/404 to typed errors.                                                                                                                                                     |
-| `extractEnqueuedChunks` | Walks the HTML, finds every `streamController.enqueue("…")` call and extracts the JS string literal (honoring `\` escapes). Malformed chunks are skipped.                                                                                                                                        |
-| `unflatten`             | Rehydrates the turbo-stream flattened array into its real object graph. Arrays hold child indices; objects are `{ "_<keyIndex>": valueIndex }`; single-letter typed markers like `["P", n]` (promise) / `["D", n]` (date) carry one payload index. Cycles are handled with an index→value cache. |
-| `findObjectWith`        | Depth-first search for the first object that owns a given key. Used to locate the container holding `linear_conversation` so its sibling `title` can be read at the same time.                                                                                                                   |
-| `contentToText`         | Flattens a message's `content` (`parts[]` joined with blank lines, or a `text` field) to a string.                                                                                                                                                                                               |
-| `markdownToBlocks`      | Splits assistant markdown into `text` and fenced-`code` `ContentBlock`s (language captured from the fence info string).                                                                                                                                                                          |
-| `interleaveImages`      | For an assistant turn carrying `content_references`, splices `image` blocks into the surrounding prose at their exact source offsets; the text around them still flows through `markdownToBlocks`. Exported for unit testing.                                                                    |
-| `embedImagesInMessages` | After all turns are built, downloads every referenced image once (deduped, parallel, capped) and rewrites each `image` block's `url` to an inlined base64 data URI. Mutates `messages` in place; un-fetchable images are dropped.                                                                |
-| `sanitizeTitle`         | Collapses whitespace, strips control chars, clamps to 200 chars. Returns `undefined` when the field is absent.                                                                                                                                                                                   |
-| `formatTimestamp`       | Converts a message `create_time` (Unix seconds) to `"YYYY-MM-DD HH:MM:SS"`, or `undefined` when absent.                                                                                                                                                                                          |
+| Function                | Responsibility                                                                                                                                                                                                                                                                                                                                                                                      |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `fetchWithTimeout`      | `fetch` with a fixed, coherent Chrome fingerprint (`CHATGPT_FETCH_HEADERS`), 15 s `AbortController` timeout, one automatic retry on the first abort. Maps HTTP 404 to a typed error and **classifies 403** into a transient Cloudflare bot challenge (`code: 'BOT_BLOCKED'`) vs a genuinely private share (`code: 'PRIVATE'`) — see [Bot Detection & the 403 Split](#bot-detection--the-403-split). |
+| `extractEnqueuedChunks` | Walks the HTML, finds every `streamController.enqueue("…")` call and extracts the JS string literal (honoring `\` escapes). Malformed chunks are skipped.                                                                                                                                                                                                                                           |
+| `unflatten`             | Rehydrates the turbo-stream flattened array into its real object graph. Arrays hold child indices; objects are `{ "_<keyIndex>": valueIndex }`; single-letter typed markers like `["P", n]` (promise) / `["D", n]` (date) carry one payload index. Cycles are handled with an index→value cache.                                                                                                    |
+| `findObjectWith`        | Depth-first search for the first object that owns a given key. Used to locate the container holding `linear_conversation` so its sibling `title` can be read at the same time.                                                                                                                                                                                                                      |
+| `contentToText`         | Flattens a message's `content` (`parts[]` joined with blank lines, or a `text` field) to a string.                                                                                                                                                                                                                                                                                                  |
+| `markdownToBlocks`      | Splits assistant markdown into `text` and fenced-`code` `ContentBlock`s (language captured from the fence info string).                                                                                                                                                                                                                                                                             |
+| `interleaveImages`      | For an assistant turn carrying `content_references`, splices `image` blocks into the surrounding prose at their exact source offsets; the text around them still flows through `markdownToBlocks`. Exported for unit testing.                                                                                                                                                                       |
+| `embedImagesInMessages` | After all turns are built, downloads every referenced image once (deduped, parallel, capped) and rewrites each `image` block's `url` to an inlined base64 data URI. Mutates `messages` in place; un-fetchable images are dropped.                                                                                                                                                                   |
+| `sanitizeTitle`         | Collapses whitespace, strips control chars, clamps to 200 chars. Returns `undefined` when the field is absent.                                                                                                                                                                                                                                                                                      |
+| `formatTimestamp`       | Converts a message `create_time` (Unix seconds) to `"YYYY-MM-DD HH:MM:SS"`, or `undefined` when absent.                                                                                                                                                                                                                                                                                             |
 
 ## Message Filtering Rules
 
@@ -118,17 +118,55 @@ dropped so the PDF omits it cleanly.
 > output, user uploads) are **not** yet extracted — see the Fidelity Limitations in
 > [PDF.md](./PDF.md). Add their reference shapes here to support them.
 
-## User-Agent Rotation
+## Bot Detection & the 403 Split
+
+`chatgpt.com` sits behind **Cloudflare Bot Management**. The app runs on
+Cloudflare Workers (OpenNext), so the share-page `fetch` leaves from a Worker
+egress IP — exactly the kind of source Cloudflare scores as a bot. A request
+with sparse headers earns an HTTP **403 challenge page**, which the app
+previously mislabeled as _"Chat is private"_ for every public link.
+
+Two mitigations live in the scraper:
+
+**1. One coherent browser fingerprint (`CHATGPT_FETCH_HEADERS`).** The share-page
+fetch sends a single, internally consistent Chrome-on-Windows header set rather
+than a rotating User-Agent. The `User-Agent`, the `sec-ch-ua` brand list, and
+`sec-ch-ua-platform` all agree, and the `Sec-Fetch-*` values describe a plausible
+top-level navigation (`Sec-Fetch-Site: none`, so no `Referer`). Rotating UAs from
+a single IP is itself a bot tell, so rotation is **not** used here.
+
+> When bumping the Chrome major version, update the UA string **and** all three
+> `sec-ch-ua` brands together, or the mismatch raises the bot score.
+
+**2. 403 classification (`fetchWithTimeout`).** A `403` is ambiguous, so the
+scraper inspects the response:
+
+- A Cloudflare challenge — `cf-mitigated: challenge` header, or a body containing
+  `cdn-cgi/challenge-platform` / `_cf_chl_opt` / "just a moment" / "attention
+  required" / "enable javascript and cookies to continue" — throws
+  `code: 'BOT_BLOCKED'`, surfaced by the API as **503** _"ChatGPT is temporarily
+  blocking automated requests. Please try again in a moment."_ (`Retry-After: 15`).
+- Anything else is treated as a genuinely private/disabled share — `code:
+'PRIVATE'`, surfaced as **403** _"This chat is private. Open the share link and
+  make it public first."_
+
+> ⚠️ The fingerprint is a **best-effort** defense. If Cloudflare blocks purely on
+> the Worker egress IP, headers alone won't pass. The high-confidence fallback is
+> to route the share fetch through a **non-Cloudflare egress** (a scraping API
+> such as ScraperAPI/ScrapingBee/Browserless, or a small relay on Vercel/a VPS).
+
+## User-Agent Rotation (image fetches only)
 
 Four UA strings are defined in `constants/app.ts` (`USER_AGENTS`) and one is
-chosen at random per request. Rotation reduces the chance ChatGPT's bot
-detection blocks a single fingerprint.
+chosen at random per **image** fetch (`fetchImageAsDataUri`). The share page no
+longer uses these — only the far less bot-sensitive `images.openai.com` /
+source-site CDN fetches do.
 
 ```
-Chrome 124 (Windows)
+Chrome 137 (Windows)
 Safari 17.4.1 (macOS)
-Chrome 123 (Linux)
-Firefox 125 (Windows)
+Chrome 137 (Linux)
+Firefox 128 (Windows)
 ```
 
 ## Fragility & Maintenance
@@ -137,9 +175,11 @@ This scraper depends on private, undocumented OpenAI internals — both the
 `streamController.enqueue` bootstrap shape and the `linear_conversation` /
 `title` field names. Any of these can change without notice.
 
-`lib/scraper.ts` and `constants/app.ts` carry `// TODO: verify … — last checked
-YYYY-MM-DD` markers on the embedding-format assumptions and the UA list. Update
-the date whenever you confirm or change them.
+`lib/scraper.ts` carries a `// TODO: verify … — last checked YYYY-MM-DD` marker
+on the embedding-format assumption. Update the date whenever you confirm or
+change it. The bot-evasion headers (`CHATGPT_FETCH_HEADERS` in `constants/app.ts`)
+and the image-fetch `USER_AGENTS` list also need periodic version bumps — see
+[Bot Detection & the 403 Split](#bot-detection--the-403-split).
 
 > ⚠️ Review after any OpenAI share-page change and at least every 3 months.
 > The contract verified by `__tests__/scraper.test.ts` (which builds a real

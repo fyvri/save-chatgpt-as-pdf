@@ -28,13 +28,44 @@ export const MAX_EMBEDDED_IMAGES = 24 // hard cap on images fetched per conversa
 export const MAX_IMAGE_BYTES = 3_000_000 // skip any single image larger than ~3 MB
 export const IMAGE_FETCH_TIMEOUT_MS = 8_000 // per-image fetch timeout
 
-// User-Agent rotation — update every 3 months or when ChatGPT blocks scraping
+// User-Agent rotation — used for the per-image fetches (images.openai.com and
+// source-site CDNs), which are far less bot-sensitive than the share page.
+// Update every 3 months or when ChatGPT blocks scraping.
 export const USER_AGENTS = [
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36',
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Safari/605.1.15',
-  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0',
+  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0',
 ] as const
+
+// Coherent browser fingerprint for the ChatGPT share-page fetch.
+//
+// chatgpt.com sits behind Cloudflare Bot Management. A request from a Cloudflare
+// Worker egress IP with sparse headers scores as a bot and gets a 403 challenge.
+// The single best defense we have without a proxy is to send ONE internally
+// consistent Chrome-on-Windows header set: the UA, sec-ch-ua client hints, and
+// sec-ch-ua-platform must all agree, and the Sec-Fetch-* values must describe a
+// plausible top-level navigation. Rotating UAs from one IP is itself a bot tell,
+// so the page fetch uses this fixed fingerprint rather than USER_AGENTS.
+// Keep the Chrome major version in the UA and all three sec-ch-ua brands in sync
+// when you bump it. No Referer: Sec-Fetch-Site:none means a direct navigation,
+// and a Referer would contradict that.
+export const CHATGPT_FETCH_HEADERS: Record<string, string> = {
+  'User-Agent':
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36',
+  Accept:
+    'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+  'Accept-Language': 'en-US,en;q=0.9',
+  'sec-ch-ua': '"Google Chrome";v="137", "Chromium";v="137", "Not/A)Brand";v="24"',
+  'sec-ch-ua-mobile': '?0',
+  'sec-ch-ua-platform': '"Windows"',
+  'Sec-Fetch-Dest': 'document',
+  'Sec-Fetch-Mode': 'navigate',
+  'Sec-Fetch-Site': 'none',
+  'Sec-Fetch-User': '?1',
+  'Upgrade-Insecure-Requests': '1',
+  Priority: 'u=0, i',
+}
 
 // WhatsApp share caption — a polished document summary built at share time (not
 // at module load) so the page count, timestamp, and live APP_URL are all
