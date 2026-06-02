@@ -21,17 +21,20 @@ const features = [
   {
     icon: ShieldCheck,
     title: 'Private & safe',
-    description: 'Nothing is stored. Links are processed, never saved.',
+    description:
+      'No sign-up or tracking. Conversation data is cached briefly for speed, then auto-deleted.',
   },
   {
     icon: Zap,
     title: 'Instant export',
-    description: 'Cached results return in milliseconds on repeat visits.',
+    description:
+      'PDF is built in your browser; no file sent to a server. Repeat links load from cache in milliseconds.',
   },
   {
     icon: FileDown,
     title: 'Clean formatting',
-    description: 'Code, images and text laid out in a tidy A4 PDF.',
+    description:
+      'Markdown, code blocks, images and emoji; all faithfully rendered in a clean A4 PDF.',
   },
 ]
 

@@ -83,11 +83,9 @@ italic***` render as real obliqued glyphs (react-pdf resolves `fontStyle`
   is a standalone `.amoled` class and the `dark` variant is extended to match it
   (see [THEMING.md](./THEMING.md)).
 - **`next-themes` is imported only via the wrapper** `components/theme-provider.tsx`
-  (a Client Component) — never directly in a Server Component. The wrapper also
-  injects a tiny inline `<script>` that defines `window.__name = (fn) => fn`
-  before next-themes' own inlined script runs, shimming an esbuild `keep-names`
-  artifact that otherwise throws `__name is not defined` on Cloudflare (see
-  [THEMING.md](./THEMING.md) and [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)).
+  (a Client Component) — never directly in a Server Component. The wrapper is a
+  thin pass-through; `keep_names = false` in `wrangler.toml` is the sole defense
+  against esbuild emitting `__name` references (see [THEMING.md](./THEMING.md)).
 - **JSON-LD/`dangerouslySetInnerHTML` only ever receive hardcoded constants.**
   Never pass scraped content into them (XSS). Scraped text reaches the user only
   through auto-escaped JSX or react-pdf text nodes.
