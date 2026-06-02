@@ -31,6 +31,13 @@ reads the same everywhere.
   dropdown (no `@radix-ui/react-dropdown-menu`) using `menuitemradio` semantics,
   outside-click/Escape to close, and a mounted-guard to avoid hydration
   mismatch. Its option `value`s must match the `themes` array above.
+- **`__name` shim:** the wrapper renders a tiny inline `<script>` (before
+  next-themes' own inlined script) that defines `window.__name = (fn) => fn` when
+  it is undefined. esbuild's `keep-names` can leak a `__name` reference into the
+  bundle that is undefined in the browser, throwing
+  `Uncaught ReferenceError: __name is not defined` and breaking the theme. This
+  shim is the runtime belt to the `keep_names = false` build flag in
+  `wrangler.toml` (see [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)).
 
 ## The Single-Class Gotcha
 

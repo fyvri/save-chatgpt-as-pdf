@@ -28,8 +28,8 @@ byte-identical to the WhatsApp share caption (see [SHARING.md](./SHARING.md)).
 
 ## Fonts (registered at module load)
 
-`Font.register` must run before any `pdf()` call. Four faces are registered from
-`/public/fonts/`:
+`Font.register` must run before any `pdf()` call. Three font families — spanning
+six `.ttf` files — are registered from `/public/fonts/`:
 
 | Family           | Files                                                                                                                       | Use                                                                                |
 | ---------------- | --------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |

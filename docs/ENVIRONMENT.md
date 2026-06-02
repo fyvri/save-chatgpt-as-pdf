@@ -1,11 +1,12 @@
 # Environment Variables
 
-| Variable                   | Required    | In Browser | Description                                                                                                                                                                                  | Example                                        |
-| -------------------------- | ----------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| `NEXT_PUBLIC_APP_URL`      | Recommended | ✅         | Canonical URL: `metadataBase`/OpenGraph (`layout.tsx`), `sitemap.ts`, `robots.ts` sitemap link, JSON-LD (`page.tsx`), and the WhatsApp share caption. Falls back to `http://localhost:3000`. | `https://save-chatgpt-as-pdf.workers.dev`      |
-| `NEXT_PUBLIC_GITHUB_URL`   | Optional    | ✅         | Navbar GitHub link. Falls back to the upstream repo URL.                                                                                                                                     | `https://github.com/fyvri/save-chatgpt-as-pdf` |
-| `UPSTASH_REDIS_REST_URL`   | Optional\*  | ❌         | Upstash REST endpoint                                                                                                                                                                        | `https://xxxx.upstash.io`                      |
-| `UPSTASH_REDIS_REST_TOKEN` | Optional\*  | ❌         | Upstash auth token                                                                                                                                                                           | `AXxxxx`                                       |
+| Variable                   | Required    | In Browser | Description                                                                                                                                                                                                                                                                                           | Example                                        |
+| -------------------------- | ----------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| `NEXT_PUBLIC_APP_URL`      | Recommended | ✅         | Canonical URL: `metadataBase`/OpenGraph (`layout.tsx`), `sitemap.ts`, `robots.ts` sitemap link, JSON-LD (`page.tsx`), and the WhatsApp share caption. Falls back to `http://localhost:3000`.                                                                                                          | `https://save-chatgpt-as-pdf.workers.dev`      |
+| `NEXT_PUBLIC_GITHUB_URL`   | Optional    | ✅         | Navbar GitHub link. Falls back to the upstream repo URL.                                                                                                                                                                                                                                              | `https://github.com/fyvri/save-chatgpt-as-pdf` |
+| `UPSTASH_REDIS_REST_URL`   | Optional\*  | ❌         | Upstash REST endpoint                                                                                                                                                                                                                                                                                 | `https://xxxx.upstash.io`                      |
+| `UPSTASH_REDIS_REST_TOKEN` | Optional\*  | ❌         | Upstash auth token                                                                                                                                                                                                                                                                                    | `AXxxxx`                                       |
+| `SCRAPINGANT_API_KEY`      | Optional†   | ❌         | ScrapingAnt API key. When set, the scraper automatically retries through ScrapingAnt's residential-IP proxy whenever the direct ChatGPT fetch is bot-challenged (`BOT_BLOCKED`). Without it, persistent bot-blocks surface as a 503 to the user. Free tier: 10,000 requests/month at scrapingant.com. | `ant_XXXX...`                                  |
 
 \* **Both Upstash variables together, or neither.** When both are present,
 caching and Upstash-backed rate limiting are enabled. When either is missing,
@@ -23,8 +24,14 @@ host. (The PWA manifest uses a relative `start_url: '/'` and does not depend on
 this value.)
 
 - **Local:** `.env.example` → `.env.local` (gitignored).
-- **Production:** `wrangler secret put <VAR>` (for the `UPSTASH_*` secrets) or
-  set vars in the Cloudflare dashboard → Workers → Settings → Variables.
+- **Production:** `wrangler secret put <VAR>` (for the `UPSTASH_*` and
+  `SCRAPINGANT_API_KEY` secrets) or set vars in the Cloudflare dashboard →
+  Workers → Settings → Variables.
 
-> **Never** prefix `UPSTASH_*` with `NEXT_PUBLIC_` — the token would be exposed
-> in the browser bundle.
+> **Never** prefix `UPSTASH_*` or `SCRAPINGANT_API_KEY` with `NEXT_PUBLIC_` —
+> these secrets would be exposed in the browser bundle.
+
+† **ScrapingAnt key is independent of Upstash.** Set `SCRAPINGANT_API_KEY` to
+enable the automatic proxy fallback for bot-blocked requests; leave it unset if
+the direct fetch is reliable in your deployment. See
+[SCRAPING.md](./SCRAPING.md#bot-detection--the-403-split).

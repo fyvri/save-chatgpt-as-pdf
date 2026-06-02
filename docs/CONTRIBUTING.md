@@ -22,7 +22,7 @@ shadcn if you are intentionally adding a new primitive (use `--legacy-peer-deps`
 because of React 19 peer ranges).
 
 The PDF fonts in `/public/fonts/` are in the repo too. If they are missing in
-your clone, see [DEPLOY.md](./DEPLOY.md) for the four required `.ttf` files.
+your clone, see [DEPLOY.md](./DEPLOY.md) for the six required `.ttf` files.
 
 ## Branches
 

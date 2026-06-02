@@ -3,9 +3,12 @@
 - **Offline:** app shell (UI, navbar, footer, static assets, icons, fonts).
 - **Requires network:** all `/api/*` calls always use the network.
 - **SW strategy:** Cache First for static; Network Only for `/api/*`.
-- **`STATIC_ASSETS`** in `sw.js` explicitly caches `/`, icons, and fonts on
-  install. All other static assets (`/_next/static/`) are cached lazily on
-  first fetch by the general Cache-First handler.
+- **`STATIC_ASSETS`** in `sw.js` explicitly caches `/`, the two PNG icons, and a
+  **subset** of fonts on install — only the core text/mono faces
+  (`Roboto-Regular.ttf`, `Roboto-Bold.ttf`, `RobotoMono-Regular.ttf`). The
+  remaining `.ttf` files (`Roboto-Italic`, `Roboto-BoldItalic`,
+  `SymbolFallback-Regular`) and all other static assets (`/_next/static/`) are
+  cached lazily on first fetch by the general Cache-First handler.
 - **Registration:** `ServiceWorkerRegister` component in `layout.tsx`.
 - **Update:** increment `CACHE_VERSION` in `public/sw.js` on each deploy.
 
@@ -23,7 +26,9 @@ background colors.
 
 ## Audit
 
-Run a production build and serve it (e.g. `npm run build && npm run start`, or
+Run a production build and serve it (`npm run build && npx next start`, or
 preview the Worker bundle with `npm run preview`), then open Chrome DevTools →
-Lighthouse → PWA category. The service worker is served from `public/sw.js`, so
-it is unaffected by the build mode.
+Lighthouse → PWA category. There is no `npm run start` script — use `npx next
+start` for the Node server, or `npm run preview` to serve the actual Worker
+bundle. The service worker is served from `public/sw.js`, so it is unaffected by
+the build mode.

@@ -95,6 +95,29 @@ async function fetchWithTimeout(url: string, attempt = 1): Promise<string> {
   }
 }
 
+// Fallback for when ChatGPT's Cloudflare Bot Management blocks the Worker's
+// datacenter egress IP. Routes the fetch through ScrapingAnt's residential-IP
+// proxy. Only called when SCRAPINGANT_API_KEY is set and the direct fetch fails
+// with BOT_BLOCKED — never used for every request (that would waste free quota).
+async function fetchViaProxy(url: string): Promise<string> {
+  const apiKey = process.env.SCRAPINGANT_API_KEY
+  if (!apiKey) {
+    throw Object.assign(new Error('BOT_BLOCKED'), { code: 'BOT_BLOCKED' })
+  }
+  const proxyUrl = `https://api.scrapingant.com/v2/general?url=${encodeURIComponent(url)}&x-api-key=${apiKey}&browser=false`
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 30_000)
+  try {
+    const res = await fetch(proxyUrl, { signal: controller.signal })
+    if (!res.ok) throw Object.assign(new Error('BOT_BLOCKED'), { code: 'BOT_BLOCKED' })
+    const html = await res.text()
+    if (!html) throw Object.assign(new Error('BOT_BLOCKED'), { code: 'BOT_BLOCKED' })
+    return html
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 /**
  * ChatGPT share pages are client-rendered: the HTML contains NO
  * [data-message-author-role] DOM nodes. The conversation is embedded as JSON
@@ -436,7 +459,16 @@ async function embedImagesInMessages(messages: Message[]): Promise<void> {
 }
 
 export async function scrapeMessages(url: string): Promise<ScrapeResult> {
-  const html = await fetchWithTimeout(url)
+  let html: string
+  try {
+    html = await fetchWithTimeout(url)
+  } catch (err: unknown) {
+    if ((err as { code?: string }).code === 'BOT_BLOCKED') {
+      html = await fetchViaProxy(url)
+    } else {
+      throw err
+    }
+  }
 
   const chunks = extractEnqueuedChunks(html)
   if (chunks.length === 0) {

@@ -83,7 +83,11 @@ italic***` render as real obliqued glyphs (react-pdf resolves `fontStyle`
   is a standalone `.amoled` class and the `dark` variant is extended to match it
   (see [THEMING.md](./THEMING.md)).
 - **`next-themes` is imported only via the wrapper** `components/theme-provider.tsx`
-  (a Client Component) — never directly in a Server Component.
+  (a Client Component) — never directly in a Server Component. The wrapper also
+  injects a tiny inline `<script>` that defines `window.__name = (fn) => fn`
+  before next-themes' own inlined script runs, shimming an esbuild `keep-names`
+  artifact that otherwise throws `__name is not defined` on Cloudflare (see
+  [THEMING.md](./THEMING.md) and [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)).
 - **JSON-LD/`dangerouslySetInnerHTML` only ever receive hardcoded constants.**
   Never pass scraped content into them (XSS). Scraped text reaches the user only
   through auto-escaped JSX or react-pdf text nodes.
@@ -128,7 +132,9 @@ this doc does **not** prescribe code changes:
 - `cheerio` is an unused dependency (the scraper decodes turbo-stream, no DOM).
 - `app/manifest.ts` imports `APP_URL` but does not use it (`start_url` is
   relative `'/'`).
-- `app/manifest.ts` sets `theme_color: '#b3002d'` and
-  `background_color: '#ffffff'`, which predate the red brand palette in
-  `app/globals.css` and `public/images/` — they are not derived from the theme
-  tokens, so they don't match the logo red.
+- `app/manifest.ts` sets `theme_color: '#b3002d'` (a hand-picked brand red) and
+  `background_color: '#ffffff'` as **static hex literals** — they are not derived
+  from the `app/globals.css` theme tokens, so they don't track the on-screen
+  `--primary` (`oklch(0.575 0.225 27)` ≈ `#e8332a`). The values are intentional
+  (the address-bar/splash tint for the installed PWA), just not auto-generated
+  from the palette, so they can drift from the logo red if the tokens change.

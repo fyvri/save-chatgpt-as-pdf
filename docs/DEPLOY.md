@@ -7,9 +7,11 @@
 2. Clone the repo and run `npm install`.
 3. The shadcn/ui primitives (`components/ui/*`, `components.json`) are checked
    into the repository — no `shadcn init`/`add` needed unless you are adding a new one.
-4. The four PDF font `.ttf` files ship in `/public/fonts/`. If they are
+4. The six PDF font `.ttf` files ship in `/public/fonts/`. If they are
    missing, source them:
-   - Roboto: https://fonts.google.com/specimen/Roboto → `Roboto-Regular.ttf`, `Roboto-Bold.ttf`
+   - Roboto: https://fonts.google.com/specimen/Roboto → `Roboto-Regular.ttf`,
+     `Roboto-Bold.ttf`, `Roboto-Italic.ttf`, `Roboto-BoldItalic.ttf` (the italic
+     faces render `*emphasis*` / `***bold italic***` as true obliqued glyphs).
    - Roboto Mono: https://fonts.google.com/specimen/Roboto+Mono → `RobotoMono-Regular.ttf`
    - `SymbolFallback-Regular.ttf` — a DejaVu-Sans-derived subset providing the
      arrow/checkmark/math glyphs Roboto lacks (→ ✔ √ ∑ ≤ ≥ …). Required by the
@@ -25,16 +27,21 @@
    `[observability] enabled = true` (Workers logs/metrics) are also defined here.
 8. `wrangler secret put UPSTASH_REDIS_REST_URL`
 9. `wrangler secret put UPSTASH_REDIS_REST_TOKEN`
-10. `npm run build:worker`
-11. `npm run deploy`
-12. Optional: connect GitHub → Cloudflare Workers CI for auto-deploy on push to `main`.
-13. Verify:
+10. (Optional) `wrangler secret put SCRAPINGANT_API_KEY` — enables the scraper's
+    built-in proxy fallback when ChatGPT bot-blocks the Worker egress. Free tier:
+    10,000 requests/month at [scrapingant.com](https://app.scrapingant.com/signup).
+    Without it the app still converts normally; persistent bot-blocks surface as a
+    503 to the user. See [ENVIRONMENT.md](./ENVIRONMENT.md).
+11. `npm run build:worker`
+12. `npm run deploy`
+13. Optional: connect GitHub → Cloudflare Workers CI for auto-deploy on push to `main`.
+14. Verify:
     ```bash
     curl -X POST https://your-worker.workers.dev/api/convert \
       -H "Content-Type: application/json" \
       -d '{"url":"https://chatgpt.com/share/..."}'
     ```
-14. Test PWA install:
+15. Test PWA install:
     - Android: Chrome → Add to Home Screen
     - iOS: Safari → Share → Add to Home Screen
     - Desktop: Chrome address bar install icon

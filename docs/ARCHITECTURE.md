@@ -23,9 +23,10 @@ Server (Node.js runtime, app/api/convert/route.ts):
   → cache check (Upstash key chatgpt:<uuid>)   [best-effort; errors ignored]
       └─ HIT  → { messages, title, fromCache: true }
   → scrapeMessages(url)        — fetch + turbo-stream decode (see SCRAPING.md)
+      ├─ direct fetch first; on BOT_BLOCKED → retry via ScrapingAnt proxy (if key set)
       ├─ interleave web-search image_group carousels into assistant prose
       ├─ embed every referenced image as a base64 data URI (capped, parallel)
-      └─ 403 bot-challenge (BOT_BLOCKED) → 503 "temporarily blocking, try again"
+      └─ BOT_BLOCKED (no key / proxy failed) → 503 "temporarily blocking, try again"
          403 private (PRIVATE) → "chat is private"   404 → "Chat not found"
          PARSE_ERROR → "structure changed"   AbortError → "slow to respond"
   → cache write (TTL 1 h)      [best-effort; errors ignored]
@@ -118,9 +119,17 @@ interface ConvertResponse {
 }
 interface ConvertError {
   error: string
-  code: 400 | 403 | 404 | 429 | 500 | 503
+  code: 400 | 403 | 404 | 429 | 500
 }
 ```
+
+> The `ConvertError.code` union in `types/chatgpt.ts` lists `400 | 403 | 404 |
+429 | 500`. The route (`app/api/convert/route.ts`) **also** returns HTTP **503**
+> with `Retry-After: 15` for a Cloudflare bot challenge (`BOT_BLOCKED`) — the type
+> simply hasn't been widened to include `503` yet. The full status table is in
+> [API.md](./API.md). `ConvertError` is a documentation/contract type; the route
+> builds responses with `NextResponse.json(..., { status })` directly rather than
+> constructing this interface, so the gap is cosmetic, not a runtime bug.
 
 > The scraper emits `text`, `code`, and `image` blocks (the last from web-search
 > `image_group` carousels — see [SCRAPING.md](./SCRAPING.md)). `latex` is the one

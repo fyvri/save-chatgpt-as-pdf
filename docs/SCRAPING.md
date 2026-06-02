@@ -23,6 +23,7 @@ window.__reactRouterContext.streamController.enqueue("[\"...flattened graph...\"
 
 ```
 fetchWithTimeout(url)            → raw HTML (fixed Chrome fingerprint, 15 s timeout, 1 retry)
+    └─ BOT_BLOCKED → fetchViaProxy(url)  → raw HTML via ScrapingAnt proxy (30 s, no JS)
 → extractEnqueuedChunks(html)    → string[] of every enqueue("…") payload
 → join + take the first stream line (the synchronous loader data)
 → JSON.parse → unflatten(values) → rehydrated object graph
@@ -37,6 +38,7 @@ fetchWithTimeout(url)            → raw HTML (fixed Chrome fingerprint, 15 s ti
 | Function                | Responsibility                                                                                                                                                                                                                                                                                                                                                                                      |
 | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `fetchWithTimeout`      | `fetch` with a fixed, coherent Chrome fingerprint (`CHATGPT_FETCH_HEADERS`), 15 s `AbortController` timeout, one automatic retry on the first abort. Maps HTTP 404 to a typed error and **classifies 403** into a transient Cloudflare bot challenge (`code: 'BOT_BLOCKED'`) vs a genuinely private share (`code: 'PRIVATE'`) — see [Bot Detection & the 403 Split](#bot-detection--the-403-split). |
+| `fetchViaProxy`         | Called only when `fetchWithTimeout` throws `BOT_BLOCKED` and `SCRAPINGANT_API_KEY` is set. Fetches the HTML via ScrapingAnt's residential-IP proxy (`browser=false`, 30 s timeout). Returns the raw HTML response body directly (`res.text()`). Re-throws `BOT_BLOCKED` if the key is absent or the proxy request returns a non-OK status or empty body.                                            |
 | `extractEnqueuedChunks` | Walks the HTML, finds every `streamController.enqueue("…")` call and extracts the JS string literal (honoring `\` escapes). Malformed chunks are skipped.                                                                                                                                                                                                                                           |
 | `unflatten`             | Rehydrates the turbo-stream flattened array into its real object graph. Arrays hold child indices; objects are `{ "_<keyIndex>": valueIndex }`; single-letter typed markers like `["P", n]` (promise) / `["D", n]` (date) carry one payload index. Cycles are handled with an index→value cache.                                                                                                    |
 | `findObjectWith`        | Depth-first search for the first object that owns a given key. Used to locate the container holding `linear_conversation` so its sibling `title` can be read at the same time.                                                                                                                                                                                                                      |
@@ -126,7 +128,7 @@ egress IP — exactly the kind of source Cloudflare scores as a bot. A request
 with sparse headers earns an HTTP **403 challenge page**, which the app
 previously mislabeled as _"Chat is private"_ for every public link.
 
-Two mitigations live in the scraper:
+Three mitigations live in the scraper:
 
 **1. One coherent browser fingerprint (`CHATGPT_FETCH_HEADERS`).** The share-page
 fetch sends a single, internally consistent Chrome-on-Windows header set rather
@@ -150,10 +152,17 @@ scraper inspects the response:
 'PRIVATE'`, surfaced as **403** _"This chat is private. Open the share link and
   make it public first."_
 
-> ⚠️ The fingerprint is a **best-effort** defense. If Cloudflare blocks purely on
-> the Worker egress IP, headers alone won't pass. The high-confidence fallback is
-> to route the share fetch through a **non-Cloudflare egress** (a scraping API
-> such as ScraperAPI/ScrapingBee/Browserless, or a small relay on Vercel/a VPS).
+**3. ScrapingAnt proxy fallback (`fetchViaProxy`).** When `fetchWithTimeout` throws
+`BOT_BLOCKED`, `scrapeMessages` automatically retries the same URL via ScrapingAnt's
+residential-IP proxy. ScrapingAnt uses `browser=false` (plain HTML fetch, no JS
+rendering) — this is sufficient because ChatGPT share pages are server-rendered.
+Requires `SCRAPINGANT_API_KEY` in the environment (free tier: 10,000 requests/month —
+see [ENVIRONMENT.md](./ENVIRONMENT.md)). If the key is absent or the proxy fails,
+`BOT_BLOCKED` propagates and the API returns a 503 to the user.
+
+> ⚠️ If `SCRAPINGANT_API_KEY` is not set, the fingerprint is the only active
+> defense. Datacenter-IP-based blocks will still surface as 503. Set the key to
+> enable the proxy fallback.
 
 ## User-Agent Rotation (image fetches only)
 
