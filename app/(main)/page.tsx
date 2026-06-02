@@ -22,19 +22,19 @@ const features = [
     icon: ShieldCheck,
     title: 'Private & safe',
     description:
-      'No sign-up or tracking. Conversation data is cached briefly for speed, then auto-deleted.',
+      'No sign-up, accounts, or third-party tracking. When caching is enabled, the parsed conversation is stored for up to an hour, then expires automatically.',
   },
   {
     icon: Zap,
     title: 'Instant export',
     description:
-      'PDF is built in your browser; no file sent to a server. Repeat links load from cache in milliseconds.',
+      'The PDF is generated in your browser and never uploaded to a server. Revisiting the same link can reuse the cached conversation and skip re-fetching from ChatGPT.',
   },
   {
     icon: FileDown,
     title: 'Clean formatting',
     description:
-      'Markdown, code blocks, images and emoji; all faithfully rendered in a clean A4 PDF.',
+      'Markdown, tables, syntax-highlighted code, inline images, and emoji are rendered into a clean, consistent A4 PDF.',
   },
 ]
 

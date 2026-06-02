@@ -1,9 +1,11 @@
 # Download, Filenames & WhatsApp Sharing
 
-Once the PDF blob exists, `ConvertForm` exposes three actions in a fixed order of
-emphasis: **Download PDF** (primary), **Share to WhatsApp** (secondary), and
-**Fullscreen Preview** (tertiary). The same Download/Share pair is repeated in
-the fullscreen reader's toolbar.
+Once the PDF blob exists, `ConvertForm` exposes two primary actions below the
+preview, in a fixed order of emphasis: **Download PDF** (primary) and **Share to
+WhatsApp** (secondary). **Fullscreen** is a separate icon-only button (a
+`Maximize2` icon with `title`/`aria-label="Open fullscreen preview"`) in the
+preview card header, to the right of the "PDF Preview" title. The same
+Download/Share pair is repeated in the fullscreen reader's toolbar.
 
 ## The Single Export Moment
 

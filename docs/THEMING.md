@@ -59,3 +59,10 @@ each variant overriding the raw `--*` custom properties. Colors are authored in
 `oklch`. `suppressHydrationWarning` is set on `<html>` because next-themes
 updates the element on the client (and on `<body>` for browser-extension
 attribute injection).
+
+Beyond the color tokens, `globals.css` also defines a `@layer base` reset
+(border/outline/background/foreground driven by the tokens) and the web footer's
+`.heart-svg` — a `heart-pulse` keyframe animation (namespaced so it doesn't clash
+with Tailwind's `pulse`), disabled under `prefers-reduced-motion: reduce`. This is
+the **on-page** footer heart in `components/layout/Footer.tsx`; the separate heart
+in the exported PDF is an SVG vector drawn in `PdfDocument` (see [PDF.md](./PDF.md#vector-marks)).

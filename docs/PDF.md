@@ -11,7 +11,9 @@ It is rendered **exactly once** per conversion (in `useChatGPTScrape`), and the
 single `Blob` is reused for the inline preview, the fullscreen reader, the
 download, and the WhatsApp share. (Mounting react-pdf's `<PDFViewer>` /
 `<PDFDownloadLink>` re-rendered the whole tree several times and crashed the
-renderer on large chats — hence the native-`<iframe>`-over-one-blob design.)
+renderer on large chats — hence the single-blob design.) That one blob is shown
+by `components/shared/PdfCanvasViewer.tsx`, which rasterizes it to `<canvas>`
+with pdf.js — see [Inline Preview](#inline-preview-pdfjs-canvas).
 
 ## `generatePdfBlob(messages, title?, exportedAt?)`
 
@@ -47,13 +49,27 @@ bold text still resolves instead of dropping to `.notdef`.
 
 ## Emoji
 
-`Font.registerEmojiSource` points at the Twemoji CDN
-(`cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/`). At render time
-react-pdf swaps each emoji for an inline color PNG fetched from that CDN.
-Emoji are **load-bearing** in ChatGPT prose (🧠/✅/❌ headings, ✔ table cells,
-👉 pointers), so they are kept verbatim rather than stripped. This requires
-network access at render time and the CSP `connect-src`/`img-src` allowances in
-`next.config.ts`.
+`Font.registerEmojiSource` points at the **same-origin** path `/emoji/`. At
+render time react-pdf swaps each emoji for an inline 72×72 color PNG fetched from
+there. Emoji are **load-bearing** in ChatGPT prose (🧠/✅/❌ headings, ✔ table
+cells, 👉 pointers), so they are kept verbatim rather than stripped.
+
+The PNGs are the Twemoji 14.x set, vendored from the `twemoji-emojis` package and
+copied into `public/emoji/` by `scripts/prepare-assets.mjs` (wired to
+`postinstall` / `predev` / `prebuild` / `build:worker`, so they exist on every
+install and every build path). They are **gitignored** — regenerated, not
+committed. Serving them same-origin (instead of the previous `cdn.jsdelivr.net`
+CDN) is a deliberate performance fix: the per-emoji CDN round-trip was ~5.6 s of
+a ~7 s cold render; local assets are edge-cached and bring an emoji-heavy
+conversion to the ~1.4 s warm floor. It also removes the third-party CDN
+dependency — only the same-origin `connect-src 'self'` / `img-src 'self'` CSP
+allowances are needed (no `cdn.jsdelivr.net`). Because the assets are
+same-origin, the PWA service worker can cache them, so emoji also render offline
+after first use.
+
+> The Twemoji set is ~3,700 PNGs (~15 MB). It is a build artifact, not source —
+> delete `public/emoji/` to force `prepare-assets` to recopy after bumping
+> `twemoji-emojis`.
 
 ## Document Structure (`PdfDocument`)
 
@@ -170,6 +186,42 @@ The footer heart, the assistant sparkle avatar, and the user person avatar are
 drawn as inline `<Svg><Path/></Svg>` vectors (not font glyphs or emoji) so they
 render exactly regardless of font coverage.
 
+## Inline Preview (pdf.js canvas)
+
+`components/shared/PdfCanvasViewer.tsx` displays the generated blob. It does
+**not** use an `<iframe src="blob:…pdf">`: desktop Chromium renders that through
+its built-in PDFium plugin, but **iOS Safari and most Android browsers cannot
+display a PDF in an iframe/object at all** — they show a broken-document
+placeholder, and no CSP allowance can fix a missing platform capability. So the
+viewer rasterizes the PDF to `<canvas>` with **pdf.js** (`pdfjs-dist`), which
+works identically on every device.
+
+Key behaviors:
+
+- **Lazy rendering.** An `IntersectionObserver` renders each page to a canvas
+  only as it scrolls into view (sized placeholders reserve the right height up
+  front via `aspect-ratio`), so a long conversation never allocates dozens of
+  full-resolution canvases at once — important for mobile memory.
+- **Self-hosted worker.** `GlobalWorkerOptions.workerSrc` points at
+  `/pdf.worker.min.mjs`, copied from `pdfjs-dist` by `scripts/prepare-assets.mjs`
+  (same mechanism as the emoji set; gitignored). No third-party CDN.
+- **SSR-safe import.** pdf.js is imported dynamically **inside** the effect, never
+  at module scope — Next renders client components on the server too, and pdf.js
+  touches the browser-only `DOMMatrix` at import time (a static import crashes the
+  prerender with `DOMMatrix is not defined`).
+- **CSP-friendly.** `getDocument({ useWasm: false })` forces pure-JS image
+  decoding so no wasm binary is fetched at runtime; pdf.js auto-detects that the
+  production CSP blocks `eval()` and falls back without it. The worker loads under
+  `worker-src 'self'`.
+- **Adaptive height.** The inline preview container uses `max-h-[70vh]` (not a
+  fixed height), so a short one-page PDF shrinks to fit with no dead space while
+  long conversations cap at 70vh and scroll. The fullscreen reader fills the
+  viewport.
+
+The same component renders both the inline preview and the fullscreen reader; the
+`URL.createObjectURL` object URL is still used for the **download** and the
+**share** fallback (not for the preview).
+
 ## Visual Testing
 
 Two manual harnesses under `__tests__/_render-*.test.ts` render documents to
@@ -206,9 +258,12 @@ closing each:
   (fractions become `(a)/(b)`, no real super/subscripts, matrices/`\begin{}` are
   not laid out). _Recommendation:_ pre-render math to SVG (KaTeX → MathML → SVG)
   server-side and embed as images for true typesetting.
-- **Emoji require network at render time** (Twemoji CDN). Offline renders silently
-  drop emoji. _Recommendation:_ vendor the Twemoji PNGs locally and point the
-  emoji source at a same-origin path.
+- **Emoji are now served same-origin** from `/emoji/` (vendored Twemoji set — see
+  [Emoji](#emoji)). This was previously a CDN dependency that dropped emoji on
+  offline renders; the PNGs are now local and PWA-cacheable, so emoji render fast
+  and work offline after first use. _Remaining nuance:_ react-pdf embeds each
+  emoji occurrence as its own image, so emoji-dense documents are larger and a bit
+  slower to lay out — inherent to react-pdf, not the asset source.
 - **Syntax highlighting is heuristic**, not a real grammar — a single
   language-agnostic tokenizer, so some tokens are mis-colored. _Recommendation:_
   swap in a real highlighter (e.g. Shiki/Prism) to produce colored spans.

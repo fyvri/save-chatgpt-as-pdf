@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useChatGPTScrape } from '@/hooks/useChatGPTScrape'
+import { PdfCanvasViewer } from '@/components/shared/PdfCanvasViewer'
 import { generatePdfFilename, formatExportStamp, countPdfPages } from '@/lib/utils'
 import { APP_URL, WHATSAPP_SHARE_TEXT } from '@/constants/app'
 
@@ -204,10 +205,23 @@ export function ConvertForm() {
       {hasPreview && (
         <Card>
           <CardHeader>
-            <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <CardTitle className="text-base">PDF Preview</CardTitle>
+              {/* Fullscreen toggle lives in the header, right of the title, so it
+                  reads as part of the preview chrome. Icon-only; title + aria-label
+                  carry the meaning for sighted hover and assistive tech alike. */}
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setIsFullscreen(true)}
+                title="Fullscreen preview"
+                aria-label="Open fullscreen preview"
+              >
+                <Maximize2 className="h-4 w-4" />
+              </Button>
               {fromCache && (
-                <Badge variant="secondary" className="gap-1">
+                <Badge variant="secondary" className="ml-auto gap-1">
                   <Zap className="h-3 w-3" />
                   Loaded from cache
                 </Badge>
@@ -215,20 +229,21 @@ export function ConvertForm() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Native iframe over the single generated blob — no re-render */}
-            <div className="h-[70vh] min-h-[420px] w-full overflow-hidden rounded-lg border bg-muted/30">
-              <iframe
-                src={objectUrl ?? undefined}
-                title="PDF Preview"
-                className="h-full w-full"
-                style={{ border: 'none' }}
-              />
-            </div>
+            {/* Canvas-rasterized preview (pdf.js) — renders on every device,
+                including iOS/Android where native <iframe> PDF embedding fails. */}
+            {/* max-h (not fixed h): the preview shrinks to fit a short, one-page
+                PDF — no dead space below it — yet still caps at 70vh and scrolls
+                for long conversations. min-h only reserves room for the loading
+                spinner before pages exist. */}
+            <PdfCanvasViewer
+              file={pdfBlob}
+              className="max-h-[70vh] min-h-[200px] w-full rounded-lg border"
+            />
 
             {/*
               Action order is fixed across every preview interface:
-              1) Download PDF (primary)  2) Share to WhatsApp (secondary)
-              3) Fullscreen Preview (tertiary). Variants step down in emphasis.
+              1) Download PDF (primary)  2) Share to WhatsApp (secondary).
+              Fullscreen now lives as an icon button in the preview header above.
             */}
             <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
               {/* 1. Download PDF — reuses the single generated blob */}
@@ -241,12 +256,6 @@ export function ConvertForm() {
               <Button variant="secondary" onClick={handleShare} disabled={!pdfBlob}>
                 <Share2 className="h-4 w-4" />
                 Share to WhatsApp
-              </Button>
-
-              {/* 3. Fullscreen Preview */}
-              <Button variant="outline" onClick={() => setIsFullscreen(true)}>
-                <Maximize2 className="h-4 w-4" />
-                Fullscreen Preview
               </Button>
             </div>
           </CardContent>
@@ -311,15 +320,8 @@ export function ConvertForm() {
             </div>
           </header>
 
-          {/* Document area — fills all remaining height; the iframe scrolls internally */}
-          <div className="bg-muted/40 min-h-0 flex-1">
-            <iframe
-              src={objectUrl ?? undefined}
-              title="Fullscreen PDF Preview"
-              className="h-full w-full"
-              style={{ border: 'none' }}
-            />
-          </div>
+          {/* Document area — fills all remaining height; the viewer scrolls internally */}
+          <PdfCanvasViewer file={pdfBlob} className="bg-muted/40 min-h-0 flex-1" />
         </div>
       )}
     </div>

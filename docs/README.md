@@ -20,8 +20,9 @@ markdown, tables, emoji, and math. Preview it inline or fullscreen, then
 visits to the same link return instantly from cache.
 
 **Stack:** Next.js 15 (App Router) · React 19 · TypeScript (strict) ·
-Tailwind v4 + shadcn/ui · `@react-pdf/renderer` · Upstash Redis (optional) ·
-Cloudflare Workers via OpenNext. PWA-enabled.
+Tailwind v4 + shadcn/ui · `@react-pdf/renderer` (generate) + `pdfjs-dist`
+(on-device canvas preview) · self-hosted Twemoji emoji · Upstash Redis
+(optional) · Cloudflare Workers via OpenNext. PWA-enabled.
 
 ## Quick Start
 

@@ -9,6 +9,11 @@
   remaining `.ttf` files (`Roboto-Italic`, `Roboto-BoldItalic`,
   `SymbolFallback-Regular`) and all other static assets (`/_next/static/`) are
   cached lazily on first fetch by the general Cache-First handler.
+- **Generated assets are same-origin and lazily cached.** The pdf.js worker
+  (`/pdf.worker.min.mjs`) and the Twemoji emoji PNGs (`/emoji/*.png`) are served
+  from the app origin, so the Cache-First handler caches each one on first fetch.
+  A consequence: once a conversation's emoji have been fetched, they render
+  **offline** too — the PDF renderer no longer depends on a third-party CDN.
 - **Registration:** `ServiceWorkerRegister` component in `layout.tsx`.
 - **Update:** increment `CACHE_VERSION` in `public/sw.js` on each deploy.
 

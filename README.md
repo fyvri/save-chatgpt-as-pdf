@@ -38,7 +38,8 @@ visits to the same link return instantly from cache.
 ## Tech stack
 
 Next.js 15 (App Router) · React 19 · TypeScript (strict) · Tailwind v4 +
-shadcn/ui · `@react-pdf/renderer` · Upstash Redis (optional) · Cloudflare
+shadcn/ui · `@react-pdf/renderer` (generate) + `pdfjs-dist` (on-device canvas
+preview) · self-hosted Twemoji emoji · Upstash Redis (optional) · Cloudflare
 Workers via OpenNext.
 
 ## Quick start
@@ -61,6 +62,7 @@ npm run dev                  # http://localhost:3000
 | Command                | Purpose                                              |
 | ---------------------- | ---------------------------------------------------- |
 | `npm run dev`          | Local dev server                                     |
+| `npm run prepare-assets` | Copy the pdf.js worker + Twemoji emoji set into `public/` (auto-runs on install/dev/build) |
 | `npm run build`        | Next.js production build                             |
 | `npm run build:worker` | OpenNext → Cloudflare Worker bundle                  |
 | `npm run preview`      | Build worker + `wrangler dev` (local Worker preview) |
@@ -77,13 +79,14 @@ app/(main)/        Landing page + chrome (Navbar/Footer/ScrollToTop)
 app/api/convert/   The single POST endpoint (Node.js runtime)
 app/               Root layout, manifest, robots, sitemap, globals.css
 components/pdf/     PdfDocument — the react-pdf template
-components/shared/  ConvertForm, ThemeSwitcher, ServiceWorkerRegister, ScrollToTop
+components/shared/  ConvertForm, PdfCanvasViewer (pdf.js preview), ThemeSwitcher, ServiceWorkerRegister, ScrollToTop
 components/ui/      shadcn/ui primitives
 lib/               scraper, pdf-generator, ratelimit, redis, utils
 hooks/             useChatGPTScrape — the only caller of /api/convert
 constants/         All tunables and copy (app.ts)
 types/             Shared TypeScript types
-public/            Icons, fonts, images, service worker
+scripts/           prepare-assets.mjs — copies pdf.js worker + emoji into public/
+public/            Icons, fonts, images, service worker; build-generated (gitignored): pdf.worker.min.mjs, emoji/
 __tests__/         Vitest suites + visual render harness
 docs/              Full documentation (see below)
 ```

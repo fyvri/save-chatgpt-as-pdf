@@ -43,12 +43,17 @@ Font.register({
 
 // Emoji support — Roboto carries no emoji glyphs, so react-pdf would otherwise
 // drop them (leaving headings like "🧠 Konsep" iconless). Registering an emoji
-// source makes react-pdf swap each emoji for an inline color image fetched from
-// the Twemoji CDN at render time (render runs client-side in the browser).
-// 72×72 PNGs keep the request small while staying crisp at body/heading sizes.
+// source makes react-pdf swap each emoji for an inline color image at render
+// time (render runs client-side in the browser). 72×72 PNGs stay crisp at
+// body/heading sizes.
+//
+// Served from our own origin (/emoji/, populated by scripts/prepare-assets.mjs
+// from the twemoji-emojis package) instead of cdn.jsdelivr.net. The per-emoji
+// CDN round-trip was the dominant cost of a cold render (~5.6s of ~7s); same-
+// origin assets are edge-cached and bring emoji conversions to the ~1.4s floor.
 Font.registerEmojiSource({
   format: 'png',
-  url: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/',
+  url: '/emoji/',
 })
 
 /**

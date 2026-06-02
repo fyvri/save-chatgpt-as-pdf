@@ -4,7 +4,13 @@
    `npm install`), a Cloudflare account. An Upstash account (free tier) is
    **optional** but recommended — without it the app still works, just with no
    caching and no Upstash-backed rate limiting.
-2. Clone the repo and run `npm install`.
+2. Clone the repo and run `npm install`. Its `postinstall` hook runs
+   `scripts/prepare-assets.mjs`, which copies the pdf.js preview worker
+   (`public/pdf.worker.min.mjs`, from `pdfjs-dist`) and the Twemoji emoji set
+   (`public/emoji/`, from the `twemoji-emojis` dev dependency) into `public/`.
+   These are **gitignored** build artifacts; `prepare-assets` also re-runs on
+   `predev`/`prebuild`/`build:worker`, so they are always present before a build
+   or deploy. No manual step is needed.
 3. The shadcn/ui primitives (`components/ui/*`, `components.json`) are checked
    into the repository — no `shadcn init`/`add` needed unless you are adding a new one.
 4. The six PDF font `.ttf` files ship in `/public/fonts/`. If they are

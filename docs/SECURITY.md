@@ -35,13 +35,18 @@
   `next.config.ts`):
   - `script-src` adds `'unsafe-eval'` **only in development** (Next.js HMR);
     production keeps it out.
-  - `connect-src` allows `https://*.upstash.io`, `https://cdn.jsdelivr.net`
-    (Twemoji emoji PNGs), and `data:` (react-pdf's yoga-layout WASM module).
-  - `img-src` allows the OpenAI image hosts plus `data:`/`blob:`.
-  - `frame-src 'self' blob:`, `worker-src 'self' blob:`, and
-    `object-src 'self' blob:` are required so the generated PDF blob renders in
-    the inline `<iframe>` and in Chromium's mobile PDFium viewer (governed by
-    `object-src`).
+  - `connect-src` allows `https://*.upstash.io` and `data:` (react-pdf's
+    yoga-layout WASM module). Emoji PNGs are now served **same-origin** from
+    `/emoji/`, so `cdn.jsdelivr.net` is **no longer needed** and has been removed
+    — the app has no third-party CDN dependency at render time.
+  - `img-src` allows the OpenAI image hosts plus `data:`/`blob:` (same-origin
+    `'self'` covers the local emoji PNGs).
+  - `worker-src 'self' blob:` — `blob:` for react-pdf's own renderer worker, and
+    `'self'` for the pdf.js preview worker at `/pdf.worker.min.mjs`.
+  - `frame-src 'self' blob:` and `object-src 'self' blob:` are **legacy** from the
+    former `<iframe>`-based PDF preview. The preview is now a pdf.js `<canvas>`
+    (see [PDF.md](./PDF.md#inline-preview-pdfjs-canvas)), so these are no longer
+    required; they remain in `next.config.ts` and are harmless.
   - `base-uri 'self'`.
 - **`X-Frame-Options: DENY`** — clickjacking protection.
 - **`Permissions-Policy`** — disables camera, microphone, geolocation, payment.

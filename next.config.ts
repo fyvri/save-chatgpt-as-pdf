@@ -44,31 +44,30 @@ const nextConfig: NextConfig = {
               scriptSrc,
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' https://*.openai.com https://*.oaiusercontent.com data: blob:",
-              // cdn.jsdelivr.net: react-pdf fetches Twemoji emoji PNGs from here
-              // at render time (Font.registerEmojiSource). Without it the browser
-              // refuses the fetch and PDF generation throws.
+              // Twemoji emoji PNGs are now served same-origin from /emoji/
+              // (Font.registerEmojiSource), so no third-party CDN is needed —
+              // 'self' covers the render-time fetch.
               // data:: react-pdf loads its yoga-layout WebAssembly module by
               // fetching an inlined data: URL in the browser. connect-src governs
               // fetch(), so without data: the WASM load is blocked and the PDF
               // never renders (the data:application/octet-stream;base64,AGFzbQ…
               // CSP violation seen in the console).
-              "connect-src 'self' https://*.upstash.io https://cdn.jsdelivr.net data:",
-              // react-pdf's <PDFViewer> embeds the generated PDF in an
-              // iframe with a blob: URL — 'none' would render a blank preview.
+              "connect-src 'self' https://*.upstash.io data:",
+              // LEGACY: the PDF preview used to be an <iframe src="blob:…pdf">.
+              // It is now a pdf.js <canvas> (components/shared/PdfCanvasViewer),
+              // so frame-src/object-src blob: are no longer required. Kept as a
+              // harmless safety net; safe to drop if you're trimming the CSP.
               "frame-src 'self' blob:",
               // react-pdf spins up its renderer in a Web Worker created from a
-              // blob: URL. worker-src is unset by default, so it falls back to
-              // script-src ('self' 'unsafe-inline'), which forbids blob: and
-              // blocks the worker ("Creating a worker from 'blob:…' violates …
-              // script-src" in the console). Allow blob: workers explicitly.
+              // blob: URL, so blob: is required here. 'self' additionally allows
+              // the pdf.js preview worker served at /pdf.worker.min.mjs. worker-src
+              // is unset by default and falls back to script-src ('self'
+              // 'unsafe-inline'), which forbids blob: and blocks the worker
+              // ("Creating a worker from 'blob:…' violates … script-src").
               "worker-src 'self' blob:",
-              // The inline PDF preview is an <iframe src="blob:…pdf">. Chromium
-              // (especially on Android/mobile) renders that PDF through its
-              // internal PDFium plugin, which is governed by object-src — NOT
-              // frame-src. With object-src 'none' the mobile viewer is blocked
-              // and shows "This content is blocked. Contact the site owner to
-              // fix the issue." Allow same-origin + blob: objects so the
-              // embedded PDF viewer can load the generated blob on every device.
+              // LEGACY (see frame-src above): object-src governed Chromium's
+              // PDFium plugin for the old <iframe> preview. The canvas viewer
+              // doesn't need it; retained as a harmless safety net.
               "object-src 'self' blob:",
               "base-uri 'self'",
             ].join('; '),

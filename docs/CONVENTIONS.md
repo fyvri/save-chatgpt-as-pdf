@@ -78,7 +78,13 @@ italic***` render as real obliqued glyphs (react-pdf resolves `fontStyle`
   without cross-origin/CORS failures. Bounded by `MAX_EMBEDDED_IMAGES` /
   `MAX_IMAGE_BYTES` / `IMAGE_FETCH_TIMEOUT_MS`; failures are dropped, never fatal.
 - **Symbols rely on per-glyph fallback** (`['Roboto', 'SymbolFallback']`); emoji
-  rely on the Twemoji CDN. Both are reflected in the `next.config.ts` CSP.
+  are served **same-origin** from `/emoji/` (vendored Twemoji set, copied by
+  `scripts/prepare-assets.mjs`), not a CDN. The CSP in `next.config.ts` therefore
+  needs no third-party origin for them (see [PDF.md](./PDF.md#emoji)).
+- **Build-generated assets are gitignored.** `public/pdf.worker.min.mjs` (pdf.js
+  preview worker) and `public/emoji/` (Twemoji PNGs) are produced by
+  `scripts/prepare-assets.mjs` on `postinstall`/`predev`/`prebuild`/`build:worker`
+  — never commit them. Bumping `pdfjs-dist` or `twemoji-emojis` re-syncs them.
 - **Theme = a single class.** next-themes can't apply multi-class values; AMOLED
   is a standalone `.amoled` class and the `dark` variant is extended to match it
   (see [THEMING.md](./THEMING.md)).
@@ -102,6 +108,8 @@ italic***` render as real obliqued glyphs (react-pdf resolves `fontStyle`
 | `next` / `react` / `react-dom`                                                                                                 | App Router framework (Next 15, React 19).                           |
 | `@opennextjs/cloudflare` + `wrangler`                                                                                          | Build/deploy to Cloudflare Workers.                                 |
 | `@react-pdf/renderer`                                                                                                          | Client-side PDF rendering (transpiled via `transpilePackages`).     |
+| `pdfjs-dist`                                                                                                                   | Renders the generated PDF blob to `<canvas>` for the on-device preview (`PdfCanvasViewer`); worker self-hosted at `/pdf.worker.min.mjs`. |
+| `twemoji-emojis` (dev)                                                                                                         | Source of the vendored Twemoji 72×72 PNGs copied into `public/emoji/` at build (`scripts/prepare-assets.mjs`). |
 | `@upstash/redis` + `@upstash/ratelimit`                                                                                        | Optional cache + sliding-window rate limit.                         |
 | `next-themes`                                                                                                                  | Four-variant theming.                                               |
 | `lucide-react`                                                                                                                 | Icons.                                                              |
@@ -128,6 +136,11 @@ These are accurate observations for future maintainers; the app works as-is and
 this doc does **not** prescribe code changes:
 
 - `cheerio` is an unused dependency (the scraper decodes turbo-stream, no DOM).
+- `next.config.ts` declares `images.remotePatterns` for `**.openai.com` /
+  `**.oaiusercontent.com`, but nothing uses it: the only `next/image` consumer is
+  `Navbar.tsx` (the **local** logo), and conversation images reach the PDF as
+  inlined base64 `data:` URIs rendered by react-pdf's own `<Image>` primitive —
+  never `next/image`. The patterns are harmless but currently govern no fetch.
 - `app/manifest.ts` imports `APP_URL` but does not use it (`start_url` is
   relative `'/'`).
 - `app/manifest.ts` sets `theme_color: '#b3002d'` (a hand-picked brand red) and

@@ -38,7 +38,9 @@ Browser (useChatGPTScrape, continued):
   → expose pdfBlob + exportedAt to ConvertForm
 
 ConvertForm:
-  → URL.createObjectURL(pdfBlob) → inline <iframe> preview (+ fullscreen reader)
+  → PdfCanvasViewer renders pdfBlob to <canvas> via pdf.js (inline + fullscreen);
+    works on every device, unlike the former <iframe> (see PDF.md)
+  → URL.createObjectURL(pdfBlob) → used for Download + Share (not the preview)
   → Download PDF   : anchor download, filename via generatePdfFilename() at click time
   → Share to WhatsApp : Web Share API with the PDF file + a caption built from
                         WHATSAPP_SHARE_TEXT() (falls back to wa.me + download)
@@ -51,11 +53,14 @@ ConvertForm:
   `chatgpt.com` with a coherent browser fingerprint (to get past Cloudflare bot
   detection — see [SCRAPING.md](./SCRAPING.md)) and must keep Upstash tokens secret.
 - **PDF rendering is client-side** because `@react-pdf/renderer` runs its
-  layout engine (yoga-layout WASM) and Twemoji emoji fetches in the browser, and
-  rendering large documents server-side on a Worker is impractical. The PDF is
+  layout engine (yoga-layout WASM) in the browser, and rendering large documents
+  server-side on a Worker is impractical. (Emoji PNGs are now served same-origin
+  from `/emoji/` rather than a CDN — see [PDF.md](./PDF.md#emoji).) The PDF is
   rendered **exactly once** in `useChatGPTScrape` and the single resulting blob
   is reused for preview, download, and share (see the note in `ConvertForm.tsx`
   about why mounting react-pdf's `<PDFViewer>`/`<PDFDownloadLink>` was removed).
+  The blob is displayed by `PdfCanvasViewer` (pdf.js → `<canvas>`), which renders
+  on every device including iOS/Android — see [PDF.md](./PDF.md#inline-preview-pdfjs-canvas).
 
 ## Folder Purpose
 
@@ -67,13 +72,14 @@ ConvertForm:
 | `components/ui/`     | shadcn/ui primitives: `button`, `input`, `alert`, `skeleton`, `badge`, `card`                                                               |
 | `components/pdf/`    | `PdfDocument` — the react-pdf document template                                                                                             |
 | `components/layout/` | `Navbar`, `Footer`                                                                                                                          |
-| `components/shared/` | Client feature components: `ConvertForm`, `ThemeSwitcher`, `ScrollToTop`, `ServiceWorkerRegister`                                           |
+| `components/shared/` | Client feature components: `ConvertForm`, `PdfCanvasViewer` (pdf.js preview), `ThemeSwitcher`, `ScrollToTop`, `ServiceWorkerRegister`        |
 | `components/` (root) | `theme-provider` (next-themes wrapper)                                                                                                      |
 | `lib/`               | `scraper`, `pdf-generator`, `ratelimit`, `redis`, `utils`                                                                                   |
 | `hooks/`             | `useChatGPTScrape` — the only caller of `/api/convert`                                                                                      |
 | `types/`             | Shared TypeScript types (`chatgpt.ts`)                                                                                                      |
 | `constants/`         | All magic strings and tunables (`app.ts`)                                                                                                   |
-| `public/`            | Icons, fonts, images, service worker (`sw.js`)                                                                                              |
+| `public/`            | Icons, fonts, images, service worker (`sw.js`). Build-generated (gitignored): `pdf.worker.min.mjs` (pdf.js preview worker) and `emoji/` (Twemoji PNGs) — see [PDF.md](./PDF.md) |
+| `scripts/`           | `prepare-assets.mjs` — copies the pdf.js worker + Twemoji emoji set into `public/` (runs on install/build)                                   |
 | `__tests__/`         | Vitest suites + the visual render harness                                                                                                   |
 | `docs/`              | This documentation                                                                                                                          |
 
